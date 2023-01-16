@@ -6,10 +6,18 @@
 #include <omp.h>
 
 #define GET(arr,x,y) (arr)[(y) * GRID_SITZE_X + (x)]
-#define GRID_SITZE_X 10048
-#define GRID_SITZE_Y 10048
+/*
+#define GRID_SITZE_X 4098
+#define GRID_SITZE_Y 4098
 #define GOAL_X 1024
 #define GOAL_Y 1024
+*/
+#define GRID_SITZE_X 16384
+#define GRID_SITZE_Y 16384
+#define GOAL_X 1024
+#define GOAL_Y 1024
+#define P 16384
+#define P_SQUARE 128
 
 clock_t start_time1, end_time1, start_time2, end_time2;
 
@@ -24,6 +32,7 @@ int yoffset[4] = { 1, 0, -1, 0 };
 // 8 adjacent tiles
 int xvec[8] = { 0, 1, 1, 1, 0, -1, -1, -1 };
 int yvec[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
+char direc[8] = { 'D', 'N', 'R', 'W', 'U', 'S', 'L', 'E' };
 
 bool* obstacle_ptr;
 int* grid_ptr;
@@ -40,9 +49,11 @@ void initialize_obstacles(int x, int y, int w, int h) {
         }
     }
 }
-
+/*
 void create_flow_field() {
- #pragma omp parallel for schedule(static, 16)
+    //#pragma omp parallel for
+    //#pragma omp parallel for collapse(2)
+#pragma omp parallel for schedule(static, 16)
     for (int x = 0; x < GRID_SITZE_X; x++) {
         for (int y = 0; y < GRID_SITZE_Y; y++) {
             int min_cost = INT_MAX;
@@ -57,30 +68,8 @@ void create_flow_field() {
                         min_cost = cost;
                         if (cost < GET(grid_ptr, x, y) && cost <= min_cost) {
 
-                            if (n == 0) {
-                                GET(vector_ptr, x, y) = 'D';
-                            }
-                            else if (n == 1) {
-                                GET(vector_ptr, x, y) = 'N';
-                            }
-                            else if (n == 2) {
-                                GET(vector_ptr, x, y) = 'R';
-                            }
-                            else if (n == 3) {
-                                GET(vector_ptr, x, y) = 'W';
-                            }
-                            else if (n == 4) {
-                                GET(vector_ptr, x, y) = 'U';
-                            }
-                            else if (n == 5) {
-                                GET(vector_ptr, x, y) = 'S';
-                            }
-                            else if (n == 6) {
-                                GET(vector_ptr, x, y) = 'L';
-                            }
-                            else if (n == 7) {
-                                GET(vector_ptr, x, y) = 'E';
-                            }
+                            GET(vector_ptr, x, y) = direc[n];
+
                         }
                         else if (GET(grid_ptr, x, y) == 0) {
                             GET(vector_ptr, x, y) = 'O';
@@ -91,6 +80,43 @@ void create_flow_field() {
         }
     }
 }
+*/
+
+
+void create_flow_field() {
+#pragma omp parallel for collapse(4)
+    for (int chunkx = 0; chunkx < GRID_SITZE_X; chunkx += P_SQUARE) {
+        for (int chunky = 0; chunky < GRID_SITZE_Y; chunky += P_SQUARE) {
+            for (int y = chunky; y < chunky + P_SQUARE; y++) {
+                for (int x = chunkx; x < chunkx + P_SQUARE; x++) {
+
+                    int min_cost = INT_MAX;
+                    //go through 8 sourrounding tiles
+                    for (int n = 0; n < 8; n++) {
+                        //check for out of bounds & blocked tiles
+                        if (!(x + xvec[n] < 0 || y + yvec[n] < 0 || x + xvec[n] >= GRID_SITZE_X || y + yvec[n] >= GRID_SITZE_Y)) {
+                            if (GET(obstacle_ptr, x, y) || GET(grid_ptr, x, y) == INT_MAX) { GET(vector_ptr, x, y) = ' '; continue; }
+                            int cost = GET(grid_ptr, x + xvec[n], y + yvec[n]);
+                            //place most efficient "vector" (direction)
+                            if (cost < min_cost) {
+                                min_cost = cost;
+                                if (cost < GET(grid_ptr, x, y) && cost <= min_cost) {
+
+                                    GET(vector_ptr, x, y) = direc[n];
+
+                                }
+                                else if (GET(grid_ptr, x, y) == 0) {
+                                    GET(vector_ptr, x, y) = 'O';
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+/**/
 
 void dijkstra() {
 
@@ -149,10 +175,10 @@ int main() {
 
     // Initialize pointers
     {
-    obstacle_ptr = malloc(sizeof(bool) * GRID_SITZE_X * GRID_SITZE_Y);
-    grid_ptr = malloc(sizeof(int) * GRID_SITZE_X * GRID_SITZE_Y);
-    visited_ptr = malloc(sizeof(bool) * GRID_SITZE_X * GRID_SITZE_Y);
-    vector_ptr = malloc(sizeof(char) * GRID_SITZE_X * GRID_SITZE_Y);
+        obstacle_ptr = malloc(sizeof(bool) * GRID_SITZE_X * GRID_SITZE_Y);
+        grid_ptr = malloc(sizeof(int) * GRID_SITZE_X * GRID_SITZE_Y);
+        visited_ptr = malloc(sizeof(bool) * GRID_SITZE_X * GRID_SITZE_Y);
+        vector_ptr = malloc(sizeof(char) * GRID_SITZE_X * GRID_SITZE_Y);
     }
 
     // Initialize the obstacles
@@ -185,9 +211,10 @@ int main() {
     start_time2 = clock();
     create_flow_field();
     end_time2 = clock();
-    
-    /*
+
+
     //output the grid with costs
+    /*
     for (int j = 0; j < GRID_SITZE_Y; j++) {
         for (int i = 0; i < GRID_SITZE_X; i++) {
             if (GET(obstacle_ptr, i, j)) {
@@ -211,7 +238,12 @@ int main() {
     }
     */
 
+    float flops1 = (GRID_SITZE_X * GRID_SITZE_Y * 10) / ((end_time1 - start_time1) / (float)CLOCKS_PER_SEC);
+    float flops2 = (GRID_SITZE_X * GRID_SITZE_Y * 2) / ((end_time2 - start_time2) / (float)CLOCKS_PER_SEC);
+
     printf("Time taken by dijkstra algorithm: %f seconds\n", (double)(end_time1 - start_time1) / CLOCKS_PER_SEC);
+    printf("Number of MFLOPS: %f\n", flops1 * 1e-6);
     printf("Time taken by create_flow_field algorithm: %f seconds\n", (double)(end_time2 - start_time2) / CLOCKS_PER_SEC);
+    printf("Number of MFLOPS: %f\n", flops2 * 1e-6);
     return 0;
 }

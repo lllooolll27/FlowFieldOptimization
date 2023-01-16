@@ -5,10 +5,10 @@
 #include <time.h>
 
 #define GET(arr,x,y) (arr)[(y) * GRID_SITZE_X + (x)]
-#define GRID_SITZE_X 2048
-#define GRID_SITZE_Y 2048
-#define GOAL_X 1024
-#define GOAL_Y 1024
+#define GRID_SITZE_X 32
+#define GRID_SITZE_Y 32
+#define GOAL_X 25
+#define GOAL_Y 25
 
 clock_t start_time, end_time;
 
@@ -115,14 +115,14 @@ int main() {
 
 
     // output the grid with costs
-/*
+
     for (int j = 0; j < GRID_SITZE_Y; j++) {
         for (int i = 0; i < GRID_SITZE_X; i++) {
             if (GET(obstacle_ptr, i, j)) {
                 printf("####");
             }
             else if (GET(grid_ptr, i, j) == INT_MAX) {
-                printf("   ");
+                printf("    ");
             }
             else {
                 printf("%3d ", GET(grid_ptr, i, j));
@@ -144,9 +144,12 @@ int main() {
         printf("\n");
     }
 
-    */
+    
+
+    float flops1 = (GRID_SITZE_X * GRID_SITZE_Y * 7) / ((end_time - start_time) / (float)CLOCKS_PER_SEC);
 
     printf("Time taken by the simple dijkstra: %f seconds\n", (double)(end_time - start_time) / CLOCKS_PER_SEC);
+    printf("Number of MFLOPS: %f\n", flops1 * 1e-6);
 
     return 0;
 }

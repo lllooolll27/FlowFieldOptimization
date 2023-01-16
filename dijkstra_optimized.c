@@ -5,8 +5,8 @@
 #include <time.h>
 
 #define GET(arr,x,y) (arr)[(y) * GRID_SITZE_X + (x)]
-#define GRID_SITZE_X 10048
-#define GRID_SITZE_Y 10048
+#define GRID_SITZE_X 4096
+#define GRID_SITZE_Y 4096
 #define GOAL_X 1024
 #define GOAL_Y 1024
 
@@ -23,6 +23,8 @@ int yoffset[4] = { 1, 0, -1, 0 };
 // 8 adjacent tiles
 int xvec[8] = { 0, 1, 1, 1, 0, -1, -1, -1 };
 int yvec[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
+char direc[8] = { 'D', 'N', 'R', 'W', 'U', 'S', 'L', 'E' };
+
 
 bool* obstacle_ptr;
 int* grid_ptr;
@@ -56,30 +58,8 @@ void create_flow_field() {
                         min_cost = cost;
                         if (cost < GET(grid_ptr, x, y) && cost <= min_cost) {
 
-                            if (n == 0) {
-                                GET(vector_ptr, x, y) = 'D';
-                            }
-                            else if (n == 1) {
-                                GET(vector_ptr, x, y) = 'N';
-                            }
-                            else if (n == 2) {
-                                GET(vector_ptr, x, y) = 'R';
-                            }
-                            else if (n == 3) {
-                                GET(vector_ptr, x, y) = 'W';
-                            }
-                            else if (n == 4) {
-                                GET(vector_ptr, x, y) = 'U';
-                            }
-                            else if (n == 5) {
-                                GET(vector_ptr, x, y) = 'S';
-                            }
-                            else if (n == 6) {
-                                GET(vector_ptr, x, y) = 'L';
-                            }
-                            else if (n == 7) {
-                                GET(vector_ptr, x, y) = 'E';
-                            }
+                            GET(vector_ptr, x, y) = direc[n];
+
                         }
                         else if (GET(grid_ptr, x, y) == 0) {
                             GET(vector_ptr, x, y) = 'O';
@@ -208,7 +188,12 @@ int main() {
 
     */
 
+    float flops1 = (GRID_SITZE_X * GRID_SITZE_Y * 7) / ((end_time1 - start_time1) / (float)CLOCKS_PER_SEC);
+    float flops2 = (GRID_SITZE_X * GRID_SITZE_Y * 3) / ((end_time2 - start_time2) / (float)CLOCKS_PER_SEC);
+
     printf("Time taken by dijkstra algorithm: %f seconds\n", (double)(end_time1 - start_time1) / CLOCKS_PER_SEC);
+    printf("Number of MFLOPS: %f\n", flops1 * 1e-6);
     printf("Time taken by create_flow_field algorithm: %f seconds\n", (double)(end_time2 - start_time2) / CLOCKS_PER_SEC);
+    printf("Number of MFLOPS: %f\n", flops2 * 1e-6);
     return 0;
 }
